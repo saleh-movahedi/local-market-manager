@@ -1,58 +1,299 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Local Market Manager
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+سیستم مدیریت فروشگاه‌های هایپرمارکت (فروشگاه‌های Franchise) با Laravel 13، Filament 3 و Queue-based sync.
 
-## About Laravel
+---
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## 🎯 هدف پروژه
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+مدیریت محصولات، قیمت‌ها، موجودی و تسویه‌حساب برای چندین فروشگاه‌های هایپرمارکت (مانند فروشگاه‌های ۶۹۹۷ و ۵۱۶۲۸ در اوکالا) با قابلیت:
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- **Sync محصولات** از API هایپرمارکت (API Gateway اوکالا)
+- **مقایسه قیمت و موجودی** بین فروشگاه‌های مختلف
+- **مدیریت مرچنت‌ها** (فروشگاه‌های شما) و تخصیص محصولات
+- **تسویه‌حساب هفتگی** خودکار با کمیسیون و لجر حسابداری
+- **پنل ادمین** با Filament v3
 
-## Learning Laravel
+---
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+## 🏗 معماری
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
-
-```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Local Market Manager                     │
+├─────────────────────────────────────────────────────────────┤
+│  Laravel 13 + Filament 3 (Admin Panel)                     │
+├─────────────────────────────────────────────────────────────┤
+│  Models                                                     │
+│  ├── Store          → فروشگاه‌های هایپرمارکت                │
+│  ├── Product        → محصولات اصلی (store-agnostic)         │
+│  ├── StoreProduct   → قیمت/موجودی هر محصول در هر فروشگاه    │
+│  ├── Category       → دسته‌بندی‌های درختی (سطح ۱، ۲)        │
+│  ├── Merchant       → مرچنت‌های شما                         │
+│  ├── MerchantProduct→ محصولات مرچنت (قیمت/موجودی سفارشی)    │
+│  ├── Order          → سفارش‌ها                              │
+│  ├── OrderItem      → آیتم‌های سفارش                        │
+│  ├── LedgerEntry    → حسابداری (فروش، کمیسیون، مرجوعی...)  │
+│  └── Settlement     → تسویه‌حساب هفتگی                     │
+├─────────────────────────────────────────────────────────────┤
+│  Jobs (Queue/Horizon)                                       │
+│  ├── SyncCategoryProducts     → SYNC یک دسته برای یک فروشگاه│
+│  ├── SyncAllStoresProducts    → SYNC همه دسته‌ها/فروشگاه‌ها  │
+│  └── CalculateSettlements     → محاسبه تسویه‌حساب هفتگی    │
+├─────────────────────────────────────────────────────────────┤
+│  API Controllers                                            │
+│  ├── StoreController          → CRUD فروشگاه + SYNC         │
+│  ├── ProductController        → محصولات + show در فروشگاه   │
+│  ├── CategoryController       → دسته‌بندی + SYNC             │
+│  ├── MerchantController       → مرچنت + Ledger/Settlements   │
+│  ├── MerchantProductController→ محصولات مرچنت               │
+│  ├── OrderController          → سفارش‌ها + وضعیت            │
+│  ├── SettlementController     → تسویه‌حساب + پرداخت         │
+│  └── ComparisonController     → مقایسه دو فروشگاه          │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+---
 
-## Contributing
+## 📦 دیتابیس (SQLite / قابل تغییر به PostgreSQL/MySQL)
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+### جداول اصلی
 
-## Code of Conduct
+| جدول | توضیح |
+|------|-------|
+| `stores` | فروشگاه‌های هایپرمارکت (code: 6997, 51628) |
+| `products` | محصولات اصلی (name, image_url, slug, attributes) |
+| `store_products` | **Pivot + Financial Data**: price, ok_price, discount, quantity, supply_status |
+| `categories` | دسته‌بندی درختی (level 1, 2, parent_ids) |
+| `merchants` | مرچنت‌های شما (code, settings, margin_percent) |
+| `merchant_products` | محصولات مرچنت با قیمت/موجودی سفارشی |
+| `orders` | سفارش‌ها (status, totals, shipping) |
+| `order_items` | آیتم‌های سفارش (unit prices, line_total) |
+| `ledger_entries` | حسابداری دوطرفه (sale, commission, refund, payout, fee) |
+| `settlements` | تسویه‌حساب هفتگی (draft → confirmed → paid) |
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+---
 
-## Security Vulnerabilities
+## 🔄 فرآیند SYNC (Queue-based)
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+```
+1. StoreController::syncAll() → Dispatch SyncAllStoresProducts Job
+        │
+        ▼
+2. SyncAllStoresProducts Job → For each active Store + Level-2 Category
+        │
+        ▼
+3. SyncCategoryProducts Job (per store+category) → Queue 'sync'
+        │
+        ├── GET https://apigateway.okala.com/api/unicorn/v2/products/store/{code}?pC_Id={cat}&slug={slug}
+        ├── UpdateOrCreate Product (master data)
+        ├── UpdateOrCreate StoreProduct (financial data per store)
+        └── Update Category.last_synced_at
+```
 
-## License
+### صف‌ها (Queues)
+- `sync` → جاب‌های SYNC محصولات
+- `financial` → تسویه‌حساب
+- `scheduler` → کرون‌جاب‌ها
+- `default` → بقیه
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+---
+
+## 📊 مقایسه فروشگاه‌ها (Comparison API)
+
+```
+GET /api/comparison?store1=51628&store2=6997
+```
+
+خروجی:
+```json
+{
+  "store1": {"id": 2, "code": "51628", "name": "فروشگاه ۵۱۶۲۸"},
+  "store2": {"id": 1, "code": "6997", "name": "فروشگاه ۶۹۹۷"},
+  "summary": {
+    "only_in_store1": 0,
+    "only_in_store2": 0,
+    "price_differences": 4,
+    "status_differences": 2,
+    "total_compared": 4
+  },
+  "price_differences": [...],
+  "status_differences": [...]
+}
+```
+
+---
+
+## 💰 تسویه‌حساب (Settlement)
+
+هر هفته دوشنبه ساعت ۰۴:۰۰:
+1. محاسبه فروش، کمیسیون، مرجوعی برای هر مرچنت
+2. ساخت/بروزرسانی `Settlement` (draft → confirmed → paid)
+3. ثبت `LedgerEntry` برای کمیسیون و قابل پرداخت
+
+---
+
+## 🖼 بهینه‌سازی عکس (Bandwidth)
+
+| نوع | اندازه | کیفیت | کاربرد |
+|-----|--------|-------|--------|
+| Thumbnail | 142x142 | 90% | جداول Filament (ImageColumn) |
+| Medium | 231x231 | 100% | جزئیات محصول |
+| Original | 0:0 (full) | 100% | دانلود کامل |
+
+**Accessors در Product Model:**
+- `thumbnail_url` → 142x142/quality:90
+- `medium_image_url` → 231x231/quality:100
+
+---
+
+## 🚀 راه‌اندازی
+
+### پیش‌نیازها
+- PHP 8.2+
+- Composer
+- SQLite / PostgreSQL / MySQL
+- Redis (برای Horizon/Queue)
+
+### نصب
+```bash
+git clone https://github.com/saleh-movahedi/local-market-manager
+cd local-market-manager
+composer install
+cp .env.example .env
+php artisan key:generate
+php artisan migrate
+php artisan db:seed  # اگر seeder داشته باشید
+```
+
+### اجرای سرور
+```bash
+# Development
+php artisan serve
+
+# Queue Worker
+php artisan queue:work --queue=sync,financial,default
+
+# Horizon (تولید/مانیتورینگ صف‌ها)
+php artisan horizon
+
+# Scheduler (کرون‌جاب‌ها)
+php artisan schedule:work
+```
+
+---
+
+## 🌐 پنل ادمین (Filament v3)
+
+```
+URL: http://localhost:8000/filament
+ایمیل: admin@local-market.com
+پسورد: admin123456
+```
+
+**Resources موجود:**
+- Stores (با دکمه SYNC در صفحه Edit)
+- Products
+- Store Products (قیمت/موجودی در هر فروشگاه)
+- Categories (درختی Level 1/2)
+- Merchants + Merchant Products
+- Orders + Order Items
+- Settlements + Ledger Entries
+
+---
+
+## 📁 ساختار پروژه (مهم)
+
+```
+app/
+├── Http/Controllers/Api/       # API Controllers
+├── Filament/Resources/         # Filament Resources (Admin Panel)
+├── Jobs/                       # Queue Jobs (Sync, Settlement)
+├── Models/                     # Eloquent Models
+├── Providers/
+│   └── AppServiceProvider.php  # Scheduler Registration
+└── Console/Kernel.php          # (در Laravel 11 در AppServiceProvider)
+
+database/
+├── migrations/                 # 11 Migration اصلی
+└── seeders/
+
+routes/
+├── api.php                     # تمام API Routes
+└── web.php
+```
+
+---
+
+## ⚙️ Environment Variables (`.env` مهم)
+
+```env
+APP_URL=http://localhost:8000
+DB_CONNECTION=sqlite
+# DB_CONNECTION=pgsql
+# DB_HOST=127.0.0.1
+# DB_PORT=5432
+# DB_DATABASE=local_market
+# DB_USERNAME=postgres
+# DB_PASSWORD=secret
+
+REDIS_HOST=127.0.0.1
+REDIS_PASSWORD=null
+REDIS_PORT=6379
+
+QUEUE_CONNECTION=redis
+# QUEUE_CONNECTION=database
+```
+
+---
+
+## 🔐 Security Notes
+
+- API هایپرمارکت عمومی است (بدون احراز هویت) اما rate-limit دارد
+- پنل ادمین با Sanctum/Filament امن است
+- توکن‌های شخصی در `.env` نگهداری می‌شوند
+
+---
+
+## 📝 Development Notes
+
+### اضافه کردن فروشگاه جدید
+```bash
+php artisan tinker --execute="
+App\Models\Store::create([
+    'name' => 'فروشگاه جدید',
+    'code' => 'NEW_CODE',
+    'url' => 'https://www.okala.com/store/NEW_CODE',
+    'is_active' => true
+]);
+"
+```
+
+### SYNC دستی یک فروشگاه
+```bash
+php artisan tinker --execute="
+App\Jobs\SyncAllStoresProducts::dispatch();
+"
+```
+
+### اجرای worker برای پردازش SYNC
+```bash
+php artisan queue:work --queue=sync,financial,default --timeout=300
+```
+
+---
+
+## 📄 License
+
+MIT License - آزاد برای استفاده تجاری و غیرتجاری.
+
+---
+
+## 🤝 Contributing
+
+PRها و Issueها خوش‌آمدند. برای تغییرات بزرگ ابتدا Issue باز کنید.
+
+---
+
+**Maintainer:** saleh-movahedi  
+**Repository:** https://github.com/saleh-movahedi/local-market-manager
